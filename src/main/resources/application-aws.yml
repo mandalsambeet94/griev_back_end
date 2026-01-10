@@ -1,0 +1,37 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/grievance_system}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 2 # Lambda-friendly pool size
+      minimum-idle: 1
+      connection-timeout: 30000
+      max-lifetime: 300000
+      idle-timeout: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    show-sql: false
+
+  # For RDS Proxy
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-south-1}
+
+# AWS Lambda Configuration
+lambda:
+  function:
+    name: grievance-api
+    memory: 512
+    timeout: 30

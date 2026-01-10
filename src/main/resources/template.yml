@@ -1,0 +1,122 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Grievance Management System API
+
+Globals:
+  Api:
+    Cors:
+      AllowMethods: "'GET,POST,PUT,PATCH,DELETE,OPTIONS'"
+      AllowHeaders: "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'"
+      AllowOrigin: "'*'"
+      MaxAge: "'300'"
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - prod
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID
+
+  SubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: Subnet IDs
+
+Resources:
+  GrievanceApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: target/grievance-management-system-1.0.0.jar
+      Handler: com.amazonaws.serverless.proxy.spring.SpringBootLambdaHandler::handleRequest
+      Runtime: java17
+      MemorySize: 512
+      Timeout: 30
+      Environment:
+        Variables:
+          PROFILE: aws
+          DB_URL: !Sub 'jdbc:postgresql://${RDSProxyEndpoint}/grievance_system'
+          JWT_SECRET: !Ref JwtSecret
+          S3_BUCKET: !Ref AttachmentsBucket
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref LambdaSecurityGroup
+        SubnetIds: !Ref SubnetIds
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+                - s3:DeleteObject
+                - s3:PutObjectAcl
+              Resource: !Sub 'arn:aws:s3:::${AttachmentsBucket}/*'
+            - Effect: Allow
+              Action:
+                - rds-db:connect
+              Resource: !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:*/grievance_admin'
+        - AmazonRDSDataFullAccess
+        - SecretsManagerReadWrite
+
+  GrievanceApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+      DefinitionBody:
+        openapi: 3.0.1
+        paths:
+          /api/{proxy+}:
+            x-amazon-apigateway-any-method:
+              responses: {}
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub 'arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${GrievanceApiFunction.Arn}/invocations'
+
+  AttachmentsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'grievance-attachments-${Environment}-${AWS::AccountId}'
+      CorsConfiguration:
+        CorsRules:
+          - AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - HEAD
+            AllowedOrigins:
+              - '*'
+            AllowedHeaders:
+              - '*'
+            MaxAge: 3000
+      LifecycleConfiguration:
+        Rules:
+          - Status: Enabled
+            ExpirationInDays: 90
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+
+  LambdaSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for Lambda function
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub 'https://${GrievanceApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+
+  S3BucketName:
+    Description: S3 bucket for attachments
+    Value: !Ref AttachmentsBucket

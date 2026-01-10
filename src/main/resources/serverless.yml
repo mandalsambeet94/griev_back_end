@@ -1,0 +1,49 @@
+service: grievance-management-system
+
+provider:
+  name: aws
+  runtime: java17
+  region: ap-south-1
+  memorySize: 512
+  timeout: 30
+  environment:
+    PROFILE: aws
+    DB_URL: ${env:DB_URL}
+    DB_USERNAME: ${env:DB_USERNAME}
+    DB_PASSWORD: ${env:DB_PASSWORD}
+    JWT_SECRET: ${env:JWT_SECRET}
+    S3_BUCKET: ${env:S3_BUCKET}
+    RDS_INSTANCE_ID: ${env:RDS_INSTANCE_ID}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:*
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - rds:*
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: "*"
+        - Effect: Allow
+          Action:
+            - sqs:*
+          Resource: "*"
+
+package:
+  artifact: target/grievance-management-system-1.0.0.jar
+
+functions:
+  api:
+    handler: com.amazonaws.serverless.proxy.spring.SpringBootLambdaHandler::handleRequest
+    events:
+      - httpApi: '*'
+
+plugins:
+  - serverless-aws-documentation
+  - serverless-aws-java-maven
