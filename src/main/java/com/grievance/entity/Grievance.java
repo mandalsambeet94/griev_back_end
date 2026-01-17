@@ -41,7 +41,7 @@ public class Grievance {
     @Column(name = "ward_no", length = 20)
     private String wardNo;
 
-    @Column(length = 150)
+    @Column(name= "name", length = 150)
     private String name;
 
     @Column(name = "father_spouse_name", length = 150)
