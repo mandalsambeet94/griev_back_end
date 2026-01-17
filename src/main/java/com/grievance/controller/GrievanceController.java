@@ -2,6 +2,7 @@ package com.grievance.controller;
 
 import com.grievance.dto.GrievanceDTO;
 import com.grievance.dto.GrievanceRequest;
+import com.grievance.entity.Grievance;
 import com.grievance.service.GrievanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -61,7 +62,7 @@ public class GrievanceController {
         return ResponseEntity.ok(grievances);
     }
 
-    @GetMapping
+    /*@GetMapping
     @Operation(summary = "Get grievances by filters")
     public ResponseEntity<List<GrievanceDTO>> getGrievancesByFilters(
             @RequestParam(required = false) String block,
@@ -71,7 +72,25 @@ public class GrievanceController {
         List<GrievanceDTO> grievances = grievanceService.getGrievancesByFilters(
                 block, gp, villageSahi, name);
         return ResponseEntity.ok(grievances);
+    }*/
+
+    @GetMapping
+    @Operation(summary = "Get grievances by filters")
+    public ResponseEntity<List<GrievanceDTO>> getGrievancesByFilters(
+            @RequestParam(required = false) String block,
+            @RequestParam(required = false) String gp,
+            @RequestParam(required = false) String villageSahi,
+            @RequestParam(required = false) String wardNo,
+            @RequestParam(required = false) Grievance.GrievanceStatus status,
+            @RequestParam(required = false) String name) {
+
+        List<GrievanceDTO> grievances = grievanceService.getGrievancesByFilters(
+                block, gp, villageSahi, wardNo, status, name
+        );
+
+        return ResponseEntity.ok(grievances);
     }
+
 
     @DeleteMapping("/{grievanceId}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")

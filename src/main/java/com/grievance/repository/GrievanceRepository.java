@@ -26,7 +26,7 @@ public interface GrievanceRepository extends JpaRepository<Grievance, Long> {
 
     List<Grievance> findByNameContainingIgnoreCase(String name);
 
-    @Query("SELECT g FROM Grievance g WHERE " +
+    /*@Query("SELECT g FROM Grievance g WHERE " +
             "(:block IS NULL OR g.block = :block) AND " +
             "(:gp IS NULL OR g.gp = :gp) AND " +
             "(:villageSahi IS NULL OR g.villageSahi = :villageSahi) AND " +
@@ -34,7 +34,37 @@ public interface GrievanceRepository extends JpaRepository<Grievance, Long> {
     List<Grievance> findByFilters(@Param("block") String block,
                                   @Param("gp") String gp,
                                   @Param("villageSahi") String villageSahi,
-                                  @Param("name") String name);
+                                  @Param("name") String name);*/
+
+    @Query("""
+SELECT g FROM Grievance g
+WHERE
+    (:block IS NULL OR g.block = :block)
+AND (:gp IS NULL OR g.gp = :gp)
+AND (:villageSahi IS NULL OR g.villageSahi = :villageSahi)
+AND (:wardNo IS NULL OR g.wardNo = :wardNo)
+AND (:name IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')))
+""")
+    List<Grievance> findWithoutStatus(
+            String block, String gp, String villageSahi, String wardNo, String name
+    );
+
+    @Query("""
+SELECT g FROM Grievance g
+WHERE
+    (:block IS NULL OR g.block = :block)
+AND (:gp IS NULL OR g.gp = :gp)
+AND (:villageSahi IS NULL OR g.villageSahi = :villageSahi)
+AND (:wardNo IS NULL OR g.wardNo = :wardNo)
+AND g.status = :status
+AND (:name IS NULL OR LOWER(g.name) LIKE LOWER(CONCAT('%', :name, '%')))
+""")
+    List<Grievance> findWithStatus(
+            String block, String gp, String villageSahi,
+            String wardNo, Grievance.GrievanceStatus status, String name
+    );
+
+
 
     List<Grievance> findTop10ByOrderByUpdatedAtDesc();
 

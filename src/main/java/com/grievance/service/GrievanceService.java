@@ -120,7 +120,7 @@ public class GrievanceService {
         return grievances.map(GrievanceDTO::fromEntity);
     }
 
-    public List<GrievanceDTO> getGrievancesByFilters(String block, String gp,
+    /*public List<GrievanceDTO> getGrievancesByFilters(String block, String gp,
                                                      String villageSahi, String name) {
         List<Grievance> grievances = grievanceRepository.findByFilters(block, gp, villageSahi, name);
 
@@ -134,7 +134,41 @@ public class GrievanceService {
         return grievances.stream()
                 .map(GrievanceDTO::fromEntity)
                 .collect(Collectors.toList());
+    }*/
+
+    public List<GrievanceDTO> getGrievancesByFilters(
+            String block,
+            String gp,
+            String villageSahi,
+            String wardNo,
+            Grievance.GrievanceStatus status,
+            String name) {
+
+        List<Grievance> grievances ;
+
+        if (status == null) {
+            grievances = grievanceRepository.findWithoutStatus(
+                    block, gp, villageSahi, wardNo, name
+            );
+        } else {
+            grievances = grievanceRepository.findWithStatus(
+                    block, gp, villageSahi, wardNo, status, name
+            );
+        }
+
+        // Load attachments for each grievance
+        grievances.forEach(grievance -> {
+            List<Attachment> attachments =
+                    attachmentRepository.findByGrievance_GrievanceId(
+                            grievance.getGrievanceId());
+            grievance.setAttachments(attachments);
+        });
+
+        return grievances.stream()
+                .map(GrievanceDTO::fromEntity)
+                .collect(Collectors.toList());
     }
+
 
     @Transactional
     public void deleteGrievance(Long grievanceId) {
