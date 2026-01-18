@@ -13,10 +13,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -81,11 +83,14 @@ public class GrievanceController {
             @RequestParam(required = false) String gp,
             @RequestParam(required = false) String villageSahi,
             @RequestParam(required = false) String wardNo,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate date,
             @RequestParam(required = false) Grievance.GrievanceStatus status,
             @RequestParam(required = false) String name) {
 
         List<GrievanceDTO> grievances = grievanceService.getGrievancesByFilters(
-                block, gp, villageSahi, wardNo, status, name
+                block, gp, villageSahi, wardNo, date, status, name
         );
 
         return ResponseEntity.ok(grievances);

@@ -1,5 +1,6 @@
 package com.grievance.service;
 
+import com.grievance.dto.AttachmentDTO;
 import com.grievance.dto.GrievanceDTO;
 import com.grievance.dto.GrievanceRequest;
 import com.grievance.entity.Attachment;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -141,18 +143,28 @@ public class GrievanceService {
             String gp,
             String villageSahi,
             String wardNo,
+            LocalDate date,
             Grievance.GrievanceStatus status,
             String name) {
 
         List<Grievance> grievances ;
+        LocalDateTime startOfDay = LocalDateTime.of(1970, 1, 1, 0, 0);;
+        LocalDateTime endOfDay =LocalDateTime.of(3000, 1, 1, 0, 0);;
+
+
+
+        if (null !=  date) {
+            startOfDay = date.atStartOfDay();
+            endOfDay = date.plusDays(1).atStartOfDay();
+        }
 
         if (status == null) {
             grievances = grievanceRepository.findWithoutStatus(
-                    block, gp, villageSahi, wardNo, name
+                    block, gp, villageSahi, wardNo,startOfDay,endOfDay, name
             );
         } else {
             grievances = grievanceRepository.findWithStatus(
-                    block, gp, villageSahi, wardNo, status, name
+                    block, gp, villageSahi, wardNo, startOfDay,endOfDay, status, name
             );
         }
 
@@ -222,8 +234,8 @@ public class GrievanceService {
         grievance.setAdminRemarks(request.getAdminRemarks());
     }
 
-    private void saveAttachments(Grievance grievance, List<com.grievance.dto.AttachmentDTO> attachmentDTOs) {
-        for (com.grievance.dto.AttachmentDTO dto : attachmentDTOs) {
+    private void saveAttachments(Grievance grievance, List<AttachmentDTO> attachmentDTOs) {
+        for (AttachmentDTO dto : attachmentDTOs) {
             Attachment attachment = new Attachment();
             attachment.setGrievance(grievance);
             attachment.setS3Url(dto.getS3Url());

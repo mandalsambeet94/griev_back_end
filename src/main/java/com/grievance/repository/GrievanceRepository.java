@@ -42,13 +42,19 @@ WHERE g.block = COALESCE(:block, g.block)
 AND g.gp = COALESCE(:gp, g.gp)
 AND g.villageSahi = COALESCE(:villageSahi, g.villageSahi)
 AND g.wardNo = COALESCE(:wardNo, g.wardNo)
+AND g.createdAt >= COALESCE(:startOfDay, g.createdAt)
+  AND g.createdAt < COALESCE(:endOfDay, g.createdAt)
+AND g.status = :status
 AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
 """)
-    List<Grievance> findWithoutStatus(
+    List<Grievance> findWithStatus(
             @Param("block") String block,
             @Param("gp") String gp,
             @Param("villageSahi") String villageSahi,
             @Param("wardNo") String wardNo,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay,
+            @Param("status") Grievance.GrievanceStatus status,
             @Param("name") String name
     );
 
@@ -58,21 +64,19 @@ WHERE g.block = COALESCE(:block, g.block)
 AND g.gp = COALESCE(:gp, g.gp)
 AND g.villageSahi = COALESCE(:villageSahi, g.villageSahi)
 AND g.wardNo = COALESCE(:wardNo, g.wardNo)
-AND g.status = :status
+AND g.createdAt >= COALESCE(:startOfDay, g.createdAt)
+AND g.createdAt < COALESCE(:endOfDay, g.createdAt)
 AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
 """)
-    List<Grievance> findWithStatus(
+    List<Grievance> findWithoutStatus(
             @Param("block") String block,
             @Param("gp") String gp,
             @Param("villageSahi") String villageSahi,
             @Param("wardNo") String wardNo,
-            @Param("status") Grievance.GrievanceStatus status,
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("endOfDay") LocalDateTime endOfDay,
             @Param("name") String name
     );
-
-
-
-
 
     List<Grievance> findTop10ByOrderByUpdatedAtDesc();
 
@@ -81,6 +85,20 @@ AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
 
     @Query("SELECT COUNT(g) FROM Grievance g WHERE g.status = :status AND g.collectedBy = :agent")
     Long countByStatusAndAgent(Grievance.GrievanceStatus status, User agent);
+
+    @Query("""
+SELECT g
+FROM Grievance g
+WHERE g.createdAt >= :startOfDay
+  AND g.createdAt < :startOfNextDay
+  AND g.collectedBy = :agent
+""")
+    List<Grievance> countTodayByAgent(
+            @Param("startOfDay") LocalDateTime startOfDay,
+            @Param("startOfNextDay") LocalDateTime startOfNextDay,
+            @Param("agent") User agent
+    );
+
 
     @Query("SELECT g.block, COUNT(g) FROM Grievance g GROUP BY g.block")
     List<Object[]> countByBlock();

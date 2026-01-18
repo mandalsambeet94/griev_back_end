@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,8 +99,14 @@ public class DashboardService {
         }
         response.setGrievanceStatusCounts(statusCounts);
 
-        // Recent activity (last 7 days)
-        // You can implement this based on your needs
+        ZoneId zoneId = ZoneId.of("Asia/Kolkata");
+        LocalDate today = LocalDate.now(zoneId);
+
+        List<Grievance> grievances = grievanceRepository.countTodayByAgent(today.atStartOfDay(), today.plusDays(1).atStartOfDay(), currentUser);
+
+        response.setRecentActivity(grievances.stream()
+                .map(GrievanceDTO::fromEntity)
+                .collect(Collectors.toList()));
 
         return response;
     }
