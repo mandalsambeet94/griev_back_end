@@ -1,11 +1,13 @@
 package com.grievance.service;
 
+import com.grievance.dto.AgenrDTO;
 import com.grievance.dto.UserDTO;
 import com.grievance.entity.User;
 import com.grievance.exception.ResourceNotFoundException;
 import com.grievance.exception.UnauthorizedException;
 import com.grievance.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,24 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthService authService;
+
+
+    @Transactional
+    public String saveAgent(AgenrDTO userDTO) {
+        /*if (StringUtils.isBlank(userDTO.getRole()) || "AGENT" != userDTO.getRole()) {
+            throw new UnauthorizedException("Check role. Please note, Admin cannot create another admin");
+        }*/
+        User currentUser = authService.getCurrentUser();
+        User user = new User();
+        user.setName("APS_AGENT" + (userRepository.findAgentCountByAdmin(String.valueOf(currentUser.getId())) + 1));
+        user.setRole(User.Role.valueOf("AGENT"));
+        user.setGpAssigned(String.valueOf(currentUser.getId()));
+        user.setPassword(passwordEncoder.encode(userDTO.getNewPassword()));
+
+        userRepository.save(user);
+
+        return "Agent created successfully...";
+    }
 
     public UserDTO getUserDetails(Long userId) {
         User user = userRepository.findById(userId)

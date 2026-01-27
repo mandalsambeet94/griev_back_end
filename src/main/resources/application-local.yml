@@ -1,0 +1,28 @@
+# Local Development Configuration
+spring:
+  config:
+    activate:
+      on-profile: local
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/grievance_db
+    username: postgres
+    password: 1234
+    hikari:
+      maximum-pool-size: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+  address: 0.0.0.0
+
+# Local S3 Simulation (optional)
+aws:
+  endpoint-override: http://localhost:4566  # For LocalStack

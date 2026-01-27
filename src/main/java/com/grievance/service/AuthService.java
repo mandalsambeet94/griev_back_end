@@ -31,7 +31,7 @@ public class AuthService {
         }
 
         User user = userDTO.toEntity();
-        System.out.println("enum val: "+ user.getRole().getClass());
+        //System.out.println("enum val: "+ user.getRole().getClass());
         user.setPassword(passwordEncoder.encode(userDTO.getNewPassword()));
 
         User savedUser = userRepository.save(user);
@@ -45,7 +45,7 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getContact(),
+                        request.getName(),
                         request.getPassword()
                 )
         );
@@ -70,7 +70,7 @@ public class AuthService {
         }
 
         String contact = authentication.getName();
-        return userRepository.findByContact(contact)
+        return userRepository.findByName(contact)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
     }
 }

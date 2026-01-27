@@ -1,6 +1,7 @@
 package com.grievance.controller;
 
 import com.grievance.dto.GrievanceDTO;
+import com.grievance.dto.GrievanceFilter;
 import com.grievance.dto.GrievanceRequest;
 import com.grievance.entity.Grievance;
 import com.grievance.service.GrievanceService;
@@ -78,6 +79,17 @@ public class GrievanceController {
 
     @GetMapping
     @Operation(summary = "Get grievances by filters")
+    public ResponseEntity<List<GrievanceDTO>> getGrievances(
+            @ModelAttribute GrievanceFilter filter) {
+
+        return ResponseEntity.ok(
+                grievanceService.getGrievances(filter)
+        );
+    }
+
+
+    /*@GetMapping
+    @Operation(summary = "Get grievances by filters")
     public ResponseEntity<List<GrievanceDTO>> getGrievancesByFilters(
             @RequestParam(required = false) String block,
             @RequestParam(required = false) String gp,
@@ -85,16 +97,20 @@ public class GrievanceController {
             @RequestParam(required = false) String wardNo,
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
-            LocalDate date,
+            LocalDate startDate,
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate endDate,
             @RequestParam(required = false) Grievance.GrievanceStatus status,
-            @RequestParam(required = false) String name) {
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String contact,
+            @RequestParam(required = false) String fatherSpouseName) {
 
         List<GrievanceDTO> grievances = grievanceService.getGrievancesByFilters(
-                block, gp, villageSahi, wardNo, date, status, name
+                block, gp, villageSahi, wardNo, startDate,endDate, status, name, contact, fatherSpouseName
         );
 
         return ResponseEntity.ok(grievances);
-    }
+    }*/
 
 
     @DeleteMapping("/{grievanceId}")

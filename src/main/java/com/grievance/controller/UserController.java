@@ -1,5 +1,6 @@
 package com.grievance.controller;
 
+import com.grievance.dto.AgenrDTO;
 import com.grievance.dto.UserDTO;
 import com.grievance.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,6 +22,13 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+
+    @PostMapping("/agent-signup")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Add users of type agent. (Admin only)")
+    public ResponseEntity<String> createAgent(@RequestBody AgenrDTO userDTO) {
+        return ResponseEntity.ok(userService.saveAgent(userDTO));
+    }
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")

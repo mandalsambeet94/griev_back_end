@@ -14,32 +14,42 @@ public class LambdaHandler implements RequestHandler<AwsProxyRequest, AwsProxyRe
 
     static {
         try {
+            // Initialize with default configuration
             handler = SpringBootLambdaContainerHandler.getAwsProxyHandler(
                     GrievanceApplication.class);
 
-            // We don't need to load the application context for every Lambda invocation
-            //handler.setInitializationTimeout(10_000);
+            // Version 2.0.0 uses different configuration approach
+            // Remove the problematic method calls
+            System.out.println("Spring Boot Lambda Handler initialized successfully");
 
         } catch (ContainerInitializationException e) {
-            // If we fail here, we re-throw the exception to force another cold start
+            System.err.println("Failed to initialize Spring Boot: " + e.getMessage());
+            e.printStackTrace();
             throw new RuntimeException("Could not initialize Spring Boot application", e);
         }
     }
 
     @Override
     public AwsProxyResponse handleRequest(AwsProxyRequest input, Context context) {
-        // Check if RDS is available, if not, return 503
-        if (!isRdsAvailable()) {
-            return new AwsProxyResponse(503, null,
-                    "{\"message\": \"Database is starting. Please try again in 2 minutes.\"}");
+        try {
+            // Log the request for debugging
+            if (context != null) {
+                context.getLogger().log("Received request: " + input.getHttpMethod() + " " + input.getPath());
+            }
+
+            return handler.proxy(input, context);
+        } catch (Exception e) {
+            String errorMessage = "Error in handleRequest: " + e.getMessage();
+            if (context != null) {
+                context.getLogger().log(errorMessage);
+            } else {
+                System.err.println(errorMessage);
+            }
+            e.printStackTrace();
+
+            return new AwsProxyResponse(500, null,
+                    "{\"message\": \"Internal server error\", \"error\": \"" +
+                            e.getMessage().replace("\"", "'") + "\"}");
         }
-
-        return handler.proxy(input, context);
-    }
-
-    private boolean isRdsAvailable() {
-        // Implement RDS availability check
-        // You could check CloudWatch metrics or use a simple cache
-        return true;
     }
 }

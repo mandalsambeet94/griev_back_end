@@ -1,0 +1,24 @@
+# Production Configuration (extends aws profile)
+spring:
+  config:
+    activate:
+      on-profile: production
+
+  jpa:
+    hibernate:
+      ddl-auto: none  # Must use migrations in production
+
+  # Production logging
+  logging:
+    level:
+      com.grievance: INFO
+      org.springframework: WARN
+      org.hibernate: WARN
+
+# Security
+security:
+  allowed-origins: "*"
+
+# Production-specific JWT (override in environment)
+jwt:
+  expiration: 28800000  # 8 hours for production

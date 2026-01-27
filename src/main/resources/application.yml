@@ -4,36 +4,50 @@ spring:
 
   profiles:
     active: ${PROFILE:local}
+    group:
+      aws: aws,production
+      local: local,development
 
   jackson:
     time-zone: Asia/Kolkata
     serialization:
       write-dates-as-timestamps: false
 
+  # Database configuration will be overridden by profile-specific files
   datasource:
-    url: jdbc:postgresql://localhost:5432/grievance_db
-    username: postgres
-    password: 1234
     driver-class-name: org.postgresql.Driver
+    hikari:
+      connection-timeout: 30000
+      maximum-pool-size: 2
+      minimum-idle: 1
+      max-lifetime: 300000
+      idle-timeout: 60000
+      connection-test-query: SELECT 1
 
-    jpa:
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
+    properties:
       hibernate:
-        ddl-auto: update     # use validate/none in prod
-      show-sql: true
-      properties:
-        hibernate:
-          dialect: org.hibernate.dialect.PostgreSQLDialect
-          format_sql: true
+        format_sql: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+    show-sql: false
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 server:
-  port: 8080
   servlet:
     context-path: /api
-
-  # AWS Lambda timeout is 30 seconds max
-  tomcat:
-    connection-timeout: 29000
-    keep-alive-timeout: 29000
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/xml,text/plain,text/css,application/javascript
 
 # JWT Configuration
 jwt:
@@ -42,12 +56,10 @@ jwt:
 
 # AWS Configuration
 aws:
-  region: ${AWS_REGION:ap-south-1}
+  region: ${SERVER_REGION:ap-south-1}
   s3:
-    bucket: ${S3_BUCKET:grievance-photos}
+    bucket: ${S3_BUCKET:grievance-attachments-slim-2026}
     presigned-url-expiry: 3600 # 1 hour
-  rds:
-    instance-id: ${RDS_INSTANCE_ID:grievance-db}
 
 # File Upload Configuration
 file:
@@ -62,7 +74,8 @@ security:
 # Logging
 logging:
   level:
-    main.java.com.grievance: DEBUG
+    com.grievance: DEBUG
     org.springframework.security: INFO
     org.hibernate.SQL: DEBUG
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    com.zaxxer.hikari: INFO
+    com.amazonaws.serverless: DEBUG

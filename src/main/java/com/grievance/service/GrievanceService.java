@@ -2,6 +2,7 @@ package com.grievance.service;
 
 import com.grievance.dto.AttachmentDTO;
 import com.grievance.dto.GrievanceDTO;
+import com.grievance.dto.GrievanceFilter;
 import com.grievance.dto.GrievanceRequest;
 import com.grievance.entity.Attachment;
 import com.grievance.entity.Grievance;
@@ -10,6 +11,7 @@ import com.grievance.exception.ResourceNotFoundException;
 import com.grievance.exception.UnauthorizedException;
 import com.grievance.repository.AttachmentRepository;
 import com.grievance.repository.GrievanceRepository;
+import com.grievance.repository.GrievanceSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -39,7 +41,7 @@ public class GrievanceService {
 
         // Set collected by current user
         grievance.setCollectedBy(currentUser);
-        grievance.setAgentName(currentUser.getName());
+        //grievance.setAgentName(currentUser.getName());
 
         // Set default status
         if (grievance.getStatus() == null) {
@@ -143,28 +145,28 @@ public class GrievanceService {
             String gp,
             String villageSahi,
             String wardNo,
-            LocalDate date,
+            LocalDate startDate,
+            LocalDate endDate,
             Grievance.GrievanceStatus status,
-            String name) {
+            String name, String contact, String fatherSpouseName) {
 
         List<Grievance> grievances ;
         LocalDateTime startOfDay = LocalDateTime.of(1970, 1, 1, 0, 0);;
         LocalDateTime endOfDay =LocalDateTime.of(3000, 1, 1, 0, 0);;
 
 
-
-        if (null !=  date) {
-            startOfDay = date.atStartOfDay();
-            endOfDay = date.plusDays(1).atStartOfDay();
+        if (null !=  startDate && null != endDate) {
+            startOfDay = startDate.atStartOfDay();
+            endOfDay = endDate.atStartOfDay();
         }
 
         if (status == null) {
             grievances = grievanceRepository.findWithoutStatus(
-                    block, gp, villageSahi, wardNo,startOfDay,endOfDay, name
+                    block, gp, villageSahi, wardNo,startOfDay,endOfDay,contact,fatherSpouseName, name
             );
         } else {
             grievances = grievanceRepository.findWithStatus(
-                    block, gp, villageSahi, wardNo, startOfDay,endOfDay, status, name
+                    block, gp, villageSahi, wardNo, startOfDay,endOfDay,contact,fatherSpouseName, status, name
             );
         }
 
@@ -180,6 +182,19 @@ public class GrievanceService {
                 .map(GrievanceDTO::fromEntity)
                 .collect(Collectors.toList());
     }
+
+
+    public List<GrievanceDTO> getGrievances(GrievanceFilter filter) {
+        List<Grievance> grievances =
+                grievanceRepository.findAll(
+                        GrievanceSpecification.filter(filter)
+                );
+
+        return grievances.stream()
+                .map(GrievanceDTO::fromEntity)
+                .toList();
+    }
+
 
 
     @Transactional

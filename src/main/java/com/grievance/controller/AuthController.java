@@ -21,6 +21,12 @@ public class AuthController {
     private final AuthService authService;
     private final UserService userService;
 
+
+    @GetMapping("/hello")
+    public String hello() {
+        return "hello world";
+    }
+
     @PostMapping("/signup")
     @Operation(summary = "Register a new user")
     public ResponseEntity<AuthResponse> signup(@Valid @RequestBody UserDTO userDTO) {

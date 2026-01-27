@@ -4,7 +4,10 @@ import com.grievance.entity.Grievance;
 import com.grievance.entity.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,9 +17,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface GrievanceRepository extends JpaRepository<Grievance, Long> {
+public interface GrievanceRepository extends JpaRepository<Grievance, Long>, JpaSpecificationExecutor<Grievance> {
 
     Page<Grievance> findByCollectedBy(User collectedBy, Pageable pageable);
+
+    @EntityGraph(attributePaths = "attachments")
+    List<Grievance> findAll(Specification<Grievance> spec);
 
     List<Grievance> findByBlock(String block);
 
@@ -44,6 +50,8 @@ AND g.villageSahi = COALESCE(:villageSahi, g.villageSahi)
 AND g.wardNo = COALESCE(:wardNo, g.wardNo)
 AND g.createdAt >= COALESCE(:startOfDay, g.createdAt)
   AND g.createdAt < COALESCE(:endOfDay, g.createdAt)
+  AND g.contact = COALESCE(:contact, g.contact)
+  AND g.fatherSpouseName ILIKE CONCAT('%', COALESCE(:fatherSpouseName, ''), '%')
 AND g.status = :status
 AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
 """)
@@ -54,6 +62,8 @@ AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
             @Param("wardNo") String wardNo,
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay,
+            @Param("contact") String contact,
+            @Param("fatherSpouseName") String fatherSpouseName,
             @Param("status") Grievance.GrievanceStatus status,
             @Param("name") String name
     );
@@ -66,6 +76,8 @@ AND g.villageSahi = COALESCE(:villageSahi, g.villageSahi)
 AND g.wardNo = COALESCE(:wardNo, g.wardNo)
 AND g.createdAt >= COALESCE(:startOfDay, g.createdAt)
 AND g.createdAt < COALESCE(:endOfDay, g.createdAt)
+AND g.contact = COALESCE(:contact, g.contact)
+AND g.fatherSpouseName ILIKE CONCAT('%', COALESCE(:fatherSpouseName, ''), '%')
 AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
 """)
     List<Grievance> findWithoutStatus(
@@ -75,6 +87,8 @@ AND g.name ILIKE CONCAT('%', COALESCE(:name, ''), '%')
             @Param("wardNo") String wardNo,
             @Param("startOfDay") LocalDateTime startOfDay,
             @Param("endOfDay") LocalDateTime endOfDay,
+            @Param("contact") String contact,
+            @Param("fatherSpouseName") String fatherSpouseName,
             @Param("name") String name
     );
 

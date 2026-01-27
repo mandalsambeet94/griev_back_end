@@ -6,8 +6,8 @@ import lombok.Data;
 @Data
 public class AuthRequest {
 
-    @NotBlank(message = "Contact number is required")
-    private String contact;
+    @NotBlank(message = "user name is required")
+    private String name;
 
     @NotBlank(message = "Password is required")
     private String password;

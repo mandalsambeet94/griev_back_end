@@ -11,7 +11,11 @@ import java.util.Optional;
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
 
+    @Query("SELECT COUNT(*) FROM User u WHERE u.role = 'AGENT' AND u.gpAssigned = :adminId")
+    int findAgentCountByAdmin(String adminId);
+
     Optional<User> findByContact(String contact);
+    Optional<User> findByName(String name);
 
     List<User> findByRole(User.Role role);
 

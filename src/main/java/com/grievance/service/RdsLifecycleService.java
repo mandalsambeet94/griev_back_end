@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.services.rds.RdsClient;
-import software.amazon.awssdk.services.rds.model.*;
+/*import software.amazon.awssdk.services.rds.RdsClient;
+import software.amazon.awssdk.services.rds.model.*;*/
 
 import java.time.LocalDateTime;
 
@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class RdsLifecycleService {
 
-    private final RdsClient rdsClient;
+    /*private final RdsClient rdsClient;
 
     @Value("${aws.rds.instance-id:grievance-db}")
     private String rdsInstanceId;
@@ -68,7 +68,7 @@ public class RdsLifecycleService {
         String status = getRdsStatus();
         return "available".equalsIgnoreCase(status) ||
                 "starting".equalsIgnoreCase(status);
-    }
+    } */
 
     // This method checks if RDS should be stopped based on inactivity
     // You can integrate with your activity tracking system

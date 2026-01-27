@@ -1,37 +1,61 @@
+# AWS Lambda Specific Configuration
 spring:
+  config:
+    activate:
+      on-profile: aws
+  
+  # Database Configuration for AWS RDS
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/grievance_system}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:}
-    hikari:
-      maximum-pool-size: 2 # Lambda-friendly pool size
-      minimum-idle: 1
-      connection-timeout: 30000
-      max-lifetime: 300000
-      idle-timeout: 60000
-
+  
+  # JPA Configuration for AWS
   jpa:
     hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-        format_sql: true
-        jdbc:
-          batch_size: 20
-        order_inserts: true
-        order_updates: true
+      ddl-auto: validate  # Never use 'update' in production
     show-sql: false
-
-  # For RDS Proxy
+  
+  # Cloud Configuration
   cloud:
     aws:
       region:
-        static: ${AWS_REGION:ap-south-1}
+        static: ${SERVER_REGION:ap-south-1}
+      stack:
+        auto: false
+      credentials:
+        use-default-aws-credentials-chain: true
 
-# AWS Lambda Configuration
+# Server Configuration for Lambda
+server:
+  port: 0  # Required for AWS Lambda
+  tomcat:
+    max-connections: 100
+    max-keep-alive-requests: 100
+    connection-timeout: 29000
+    keep-alive-timeout: 29000
+
+# AWS Lambda Specific
 lambda:
-  function:
-    name: grievance-api
-    memory: 512
-    timeout: 30
+  memory: ${AWS_LAMBDA_MEMORY:512}
+  timeout: ${AWS_LAMBDA_TIMEOUT:30}
+
+# Actuator Configuration (for health checks)
+management:
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+      path-mapping:
+        health: health
+
+# Logging for AWS
+logging:
+  pattern:
+    level: "%5p [%X{AWSRequestId}]"

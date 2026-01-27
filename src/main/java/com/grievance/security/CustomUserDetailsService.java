@@ -17,10 +17,10 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     @Transactional
-    public UserDetails loadUserByUsername(String contact) throws UsernameNotFoundException {
-        User user = userRepository.findByContact(contact)
+    public UserDetails loadUserByUsername(String name) throws UsernameNotFoundException {
+        User user = userRepository.findByName(name)
                 .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found with contact: " + contact));
+                        new UsernameNotFoundException("User not found with name: " + name));
 
         if (!user.getIsActive()) {
             throw new UsernameNotFoundException("User account is deactivated");
