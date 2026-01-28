@@ -22,6 +22,18 @@ public class GrievanceSpecification {
             if (f.getGp() != null)
                 predicates.add(cb.equal(root.get("gp"), f.getGp()));
 
+            if (f.getWardNo() != null)
+                predicates.add(cb.equal(root.get("wardNo"), f.getWardNo()));
+
+            if (f.getContact() != null)
+                predicates.add(cb.equal(root.get("contact"), f.getContact()));
+
+            if (f.getFatherSpouseName() != null)
+                predicates.add(cb.like(
+                        cb.lower(root.get("fatherSpouseName")),
+                        "%" + f.getFatherSpouseName().toLowerCase() + "%"
+                ));
+
             if (f.getStatus() != null)
                 predicates.add(cb.equal(root.get("status"), f.getStatus()));
 
