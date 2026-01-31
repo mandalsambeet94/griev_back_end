@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
@@ -57,6 +58,11 @@ public class AuthService {
         if (!user.getIsActive()) {
             throw new UnauthorizedException("Account is deactivated");
         }
+        if (StringUtils.hasText(user.getRole().name()) && StringUtils.hasText(request.getRole())) {
+            if (!user.getRole().name().equals(request.getRole())) {
+                throw new UnauthorizedException("Role doesn't match.");
+            }
+        }
 
         String token = jwtService.generateToken(user);
 
@@ -69,8 +75,8 @@ public class AuthService {
             throw new UnauthorizedException("User not authenticated");
         }
 
-        String contact = authentication.getName();
-        return userRepository.findByName(contact)
+        String name = authentication.getName();
+        return userRepository.findByName(name)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
     }
 }

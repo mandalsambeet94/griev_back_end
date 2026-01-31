@@ -196,7 +196,6 @@ public class GrievanceService {
     }
 
 
-
     @Transactional
     public void deleteGrievance(Long grievanceId) {
         User currentUser = authService.getCurrentUser();

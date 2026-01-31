@@ -13,12 +13,14 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.io.IOException;
 import java.net.URL;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -30,8 +32,8 @@ public class S3Service {
     @Value("${aws.region}")
     private String region;
 
-    @Value("${aws.s3.presigned-url-expiry}")
-    private Integer presignedUrlExpiry;
+    @Value("${aws.s3.presigned-url-expiry:900}")
+    private Integer presignedUrlExpiry; // seconds
 
     @Value("${file.upload.allowed-extensions:jpg,jpeg,png,pdf,doc,docx}")
     private String allowedExtensions;
@@ -45,12 +47,16 @@ public class S3Service {
                 .build();
     }
 
-    public String uploadFile(MultipartFile file, String folder) throws IOException {
-        // Validate file
-        validateFile(file);
+    private S3Presigner getS3Presigner() {
+        return S3Presigner.builder()
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+    }
 
-        String fileName = generateFileName(file.getOriginalFilename());
-        String key = folder + "/" + fileName;
+    // existing uploadFile (server-side) kept unchanged (for admin fallback)
+    public String uploadFile(MultipartFile file, String key) throws IOException {
+        validateFile(file);
 
         S3Client s3Client = getS3Client();
 
@@ -74,16 +80,11 @@ public class S3Service {
         }
     }
 
-    public String generatePresignedUrl(String fileName, String contentType) {
-        validateFileName(fileName);
-        validateContentType(contentType);
+    // generate presigned PUT URL for a specific key
+    public String generatePresignedPutUrl(String key, String contentType, int expirySeconds) {
+        validateFileName(key); // reuse validation if needed
 
-        String key = "uploads/" + generateFileName(fileName);
-
-        S3Presigner presigner = S3Presigner.builder()
-                .region(Region.of(region))
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build();
+        S3Presigner presigner = getS3Presigner();
 
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -92,18 +93,38 @@ public class S3Service {
                     .contentType(contentType)
                     .build();
 
-            PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(
-                    presign -> presign.signatureDuration(Duration.ofSeconds(presignedUrlExpiry))
-                            .putObjectRequest(putObjectRequest));
+            PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                    .putObjectRequest(putObjectRequest)
+                    .signatureDuration(Duration.ofSeconds(expirySeconds))
+                    .build();
 
+            PresignedPutObjectRequest presignedRequest = presigner.presignPutObject(presignRequest);
             return presignedRequest.url().toString();
-
         } catch (SdkServiceException e) {
             throw new FileStorageException("AWS Service error generating pre-signed URL: " + e.getMessage(), e);
         } catch (SdkClientException e) {
             throw new FileStorageException("AWS Client error generating pre-signed URL: " + e.getMessage(), e);
         }
     }
+
+    // HEAD object to check existence & size
+    public HeadObjectResponse headObject(String key) {
+        S3Client s3Client = getS3Client();
+        try {
+            HeadObjectRequest headReq = HeadObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+            return s3Client.headObject(headReq);
+        } catch (S3Exception e) {
+            return null;
+        } catch (SdkServiceException e) {
+            throw new FileStorageException("AWS Service error while checking object: " + e.getMessage(), e);
+        } catch (SdkClientException e) {
+            throw new FileStorageException("AWS Client error while checking object: " + e.getMessage(), e);
+        }
+    }
+
 
     public void deleteFile(String key) {
         S3Client s3Client = getS3Client();
@@ -127,35 +148,44 @@ public class S3Service {
         if (file.isEmpty()) {
             throw new FileStorageException("File is empty");
         }
-
         if (file.getSize() > MAX_FILE_SIZE) {
             throw new FileStorageException("File size exceeds maximum limit of 10MB");
         }
-
         String fileName = file.getOriginalFilename();
         if (fileName == null) {
             throw new FileStorageException("File name is null");
         }
-
         validateFileName(fileName);
     }
 
     private void validateFileName(String fileName) {
         String extension = getFileExtension(fileName).toLowerCase();
         List<String> allowed = Arrays.asList(allowedExtensions.split(","));
-
         if (!allowed.contains(extension)) {
             throw new FileStorageException(
                     "File type not allowed. Allowed types: " + allowedExtensions);
         }
     }
 
-    private void validateContentType(String contentType) {
-        // You can add more specific content type validation if needed
-        if (contentType == null || contentType.isEmpty()) {
-            throw new FileStorageException("Content type is required");
+    public void validateContentType(String fileName, String contentType) {
+
+        String extension = getFileExtension(fileName).toLowerCase();
+
+        Map<String, String> allowed = Map.of(
+                "jpg", "image/jpeg",
+                "jpeg", "image/jpeg",
+                "png", "image/png",
+                "pdf", "application/pdf",
+                "doc", "application/msword",
+                "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        );
+
+        if (!allowed.containsKey(extension) ||
+                !allowed.get(extension).equals(contentType)) {
+            throw new FileStorageException("Invalid file type or content type");
         }
     }
+
 
     private String getFileExtension(String fileName) {
         int lastDotIndex = fileName.lastIndexOf('.');
@@ -165,19 +195,13 @@ public class S3Service {
         return fileName.substring(lastDotIndex + 1);
     }
 
-    private String generateFileName(String originalFileName) {
-        String sanitizedFileName = originalFileName.replaceAll("[^a-zA-Z0-9.-]", "_");
-        return UUID.randomUUID().toString() + "_" + sanitizedFileName;
-    }
-
-    private String generateFileUrl(String key) {
+    public String generateFileUrl(String key) {
         return String.format("https://%s.s3.%s.amazonaws.com/%s",
                 bucketName, region, key);
     }
 
     public String getFileUrl(String key) {
         S3Client s3Client = getS3Client();
-
         try {
             GetUrlRequest getUrlRequest = GetUrlRequest.builder()
                     .bucket(bucketName)
