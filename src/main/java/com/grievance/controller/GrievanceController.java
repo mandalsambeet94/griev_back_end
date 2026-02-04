@@ -1,9 +1,6 @@
 package com.grievance.controller;
 
-import com.grievance.dto.GrievanceDTO;
-import com.grievance.dto.GrievanceExportRequest;
-import com.grievance.dto.GrievanceFilter;
-import com.grievance.dto.GrievanceRequest;
+import com.grievance.dto.*;
 import com.grievance.entity.Grievance;
 import com.grievance.service.GrievanceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -139,7 +136,7 @@ public class GrievanceController {
                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
                     .body(fileBytes);
         }*/
-        if ("excel".equalsIgnoreCase(request.getFormat())) {
+        if (request.getFormat() == ExportFormat.EXCEL) {
 
             fileBytes = grievanceService.exportToCsv(request.getGrievanceIds());
 
