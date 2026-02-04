@@ -12,7 +12,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,7 +27,7 @@ public class UserService {
 
 
     @Transactional
-    public String saveAgent(AgenrDTO userDTO) {
+    public Map<String, String> saveAgent(AgenrDTO userDTO) {
         /*if (StringUtils.isBlank(userDTO.getRole()) || "AGENT" != userDTO.getRole()) {
             throw new UnauthorizedException("Check role. Please note, Admin cannot create another admin");
         }*/
@@ -36,9 +38,13 @@ public class UserService {
         user.setGpAssigned(String.valueOf(currentUser.getId()));
         user.setPassword(passwordEncoder.encode(userDTO.getNewPassword()));
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
 
-        return "Agent created successfully...";
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Agent created successfully");
+        response.put("agentId", String.valueOf(savedUser.getName()));
+
+        return response;
     }
 
     public UserDTO getUserDetails(Long userId) {

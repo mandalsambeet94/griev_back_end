@@ -125,4 +125,13 @@ WHERE g.createdAt >= :startOfDay
             "GROUP BY DATE(g.createdAt) " +
             "ORDER BY DATE(g.createdAt)")
     List<Object[]> countByDate(@Param("startDate") LocalDateTime startDate);
+
+    @Query("""
+    SELECT DISTINCT g
+    FROM Grievance g
+    LEFT JOIN FETCH g.attachments a
+    WHERE g.id IN :ids
+""")
+    List<Grievance> findAllWithAttachmentsByIdIn(@Param("ids") List<Long> ids);
+
 }

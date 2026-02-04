@@ -40,7 +40,7 @@ public class DashboardService {
         response.setTotalGrievances(grievanceRepository.count());
         /*response.setActiveAgents(userRepository.findByRoleAndIsActiveTrue(
                 com.grievance.entity.User.Role.AGENT));*/
-        response.setTotalUsers(userRepository.count());
+        response.setTotalUsers((long) userRepository.findByRoleAndIsActiveTrue(User.Role.AGENT).size());
 
         // Grievance status breakdown
         Map<String, Long> statusCounts = new HashMap<>();

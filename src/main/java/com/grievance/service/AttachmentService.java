@@ -43,6 +43,8 @@ public class AttachmentService {
         // deterministic key
         String key = buildKey(String.valueOf(grievance.getGrievanceId()), uploadId, req.getFileName());
 
+        String s3Url = s3Service.generateFileUrl(key);
+
         // check existing DB row by grievance+uploadId
         Attachment saved = attachmentRepository.findByGrievance_GrievanceIdAndUploadId(grievance.getGrievanceId(), uploadId)
                 .orElseGet(() -> {
@@ -50,6 +52,7 @@ public class AttachmentService {
                     a.setGrievance(grievance);
                     a.setUploadId(uploadId);
                     a.setS3Key(key);
+                    a.setS3Url(s3Url);
                     a.setFileName(req.getFileName());
                     a.setFileType(req.getFileType());
                     a.setStatus(AttachmentStatus.PENDING);

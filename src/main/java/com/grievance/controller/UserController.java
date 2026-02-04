@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -26,7 +27,7 @@ public class UserController {
     @PostMapping("/agent-signup")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     @Operation(summary = "Add users of type agent. (Admin only)")
-    public ResponseEntity<String> createAgent(@RequestBody AgenrDTO userDTO) {
+    public ResponseEntity<Map<String, String>> createAgent(@RequestBody AgenrDTO userDTO) {
         return ResponseEntity.ok(userService.saveAgent(userDTO));
     }
 

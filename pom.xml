@@ -139,6 +139,13 @@
             <artifactId>aws-serverless-java-container-springboot3</artifactId>
             <version>2.0.0</version>
         </dependency>
+
+        <!-- PDF -->
+        <dependency>
+            <groupId>com.github.librepdf</groupId>
+            <artifactId>openpdf</artifactId>
+            <version>1.3.39</version>
+        </dependency>
     </dependencies>
 
 

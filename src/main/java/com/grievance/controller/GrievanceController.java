@@ -1,6 +1,7 @@
 package com.grievance.controller;
 
 import com.grievance.dto.GrievanceDTO;
+import com.grievance.dto.GrievanceExportRequest;
 import com.grievance.dto.GrievanceFilter;
 import com.grievance.dto.GrievanceRequest;
 import com.grievance.entity.Grievance;
@@ -15,6 +16,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -119,5 +122,40 @@ public class GrievanceController {
     public ResponseEntity<Void> deleteGrievance(@PathVariable Long grievanceId) {
         grievanceService.deleteGrievance(grievanceId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/export")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    public ResponseEntity<byte[]> exportGrievances(
+            @RequestBody GrievanceExportRequest request) throws Exception {
+
+        byte[] fileBytes;
+
+        /*if ("excel".equalsIgnoreCase(request.getFormat())) {
+            fileBytes = grievanceService.exportToExcel(request.getGrievanceIds());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=grievances.xlsx")
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(fileBytes);
+        }*/
+        if ("excel".equalsIgnoreCase(request.getFormat())) {
+
+            fileBytes = grievanceService.exportToCsv(request.getGrievanceIds());
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=grievances.csv")
+                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .body(fileBytes);
+        }
+        else {
+            fileBytes = grievanceService.exportToPdf(request.getGrievanceIds());
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=grievances.pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(fileBytes);
+        }
     }
 }
