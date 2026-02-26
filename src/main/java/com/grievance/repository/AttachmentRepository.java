@@ -21,4 +21,5 @@ public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
     List<Attachment> findByGrievance_GrievanceIdAndStatus(Long grievanceId, AttachmentStatus status);
 
     void deleteByGrievance_GrievanceId(Long grievanceId);
+    void deleteByGrievance_GrievanceIdIn(List<Long> grievanceIds);
 }

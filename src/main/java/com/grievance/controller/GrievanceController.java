@@ -113,11 +113,11 @@ public class GrievanceController {
     }*/
 
 
-    @DeleteMapping("/{grievanceId}")
+    @DeleteMapping
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
-    @Operation(summary = "Delete grievance (Admin only)")
-    public ResponseEntity<Void> deleteGrievance(@PathVariable Long grievanceId) {
-        grievanceService.deleteGrievance(grievanceId);
+    @Operation(summary = "Delete multiple grievances (Admin only)")
+    public ResponseEntity<Void> deleteGrievances(@RequestBody List<Long> grievanceIds) {
+        grievanceService.deleteGrievances(grievanceIds);
         return ResponseEntity.noContent().build();
     }
 
@@ -127,15 +127,6 @@ public class GrievanceController {
             @RequestBody GrievanceExportRequest request) throws Exception {
 
         byte[] fileBytes;
-
-        /*if ("excel".equalsIgnoreCase(request.getFormat())) {
-            fileBytes = grievanceService.exportToExcel(request.getGrievanceIds());
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=grievances.xlsx")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .body(fileBytes);
-        }*/
         if (request.getFormat() == ExportFormat.EXCEL) {
 
             fileBytes = grievanceService.exportToCsv(request.getGrievanceIds());
@@ -143,7 +134,7 @@ public class GrievanceController {
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=grievances.csv")
-                    .contentType(MediaType.parseMediaType("text/csv"))
+                    .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
                     .body(fileBytes);
         }
         else {

@@ -13,6 +13,7 @@ import com.grievance.repository.AttachmentRepository;
 import com.grievance.repository.GrievanceRepository;
 import com.grievance.repository.GrievanceSpecification;
 
+import com.grievance.utility.DateFormatter;
 import com.lowagie.text.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +33,7 @@ import org.apache.poi.xssf.streaming.SXSSFWorkbook;*/
 
 // OpenPDF (PDF)
 import com.lowagie.text.pdf.PdfWriter;
+import org.springframework.util.StringUtils;
 /*import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfPCell;
 
@@ -68,6 +70,10 @@ public class GrievanceService {
         // Set default status
         if (grievance.getStatus() == null) {
             grievance.setStatus(Grievance.GrievanceStatus.PENDING);
+        }
+
+        if (!StringUtils.hasText(grievance.getGp())) {
+            grievance.setGp("N/A");
         }
 
         // Save grievance
@@ -219,28 +225,44 @@ public class GrievanceService {
 
 
     @Transactional
-    public void deleteGrievance(Long grievanceId) {
+    public void deleteGrievances(List<Long> grievanceIds) {
+
         User currentUser = authService.getCurrentUser();
 
-        // Check if user is admin
+        // Role check
         if (!currentUser.getRole().equals(User.Role.ADMIN) &&
                 !currentUser.getRole().equals(User.Role.SUPER_ADMIN)) {
             throw new UnauthorizedException("Only admin can delete grievances");
         }
 
-        Grievance grievance = grievanceRepository.findById(grievanceId)
-                .orElseThrow(() -> new ResourceNotFoundException("Grievance not found"));
-
-        // Delete attachments from S3
-        if (grievance.getAttachments() != null) {
-            for (Attachment attachment : grievance.getAttachments()) {
-                s3Service.deleteFile(attachment.getS3Key());
-            }
+        if (grievanceIds == null || grievanceIds.isEmpty()) {
+            throw new IllegalArgumentException("Grievance ID list cannot be empty");
         }
 
-        // Delete from database
-        attachmentRepository.deleteByGrievance_GrievanceId(grievanceId);
-        grievanceRepository.delete(grievance);
+        // Fetch all grievances at once
+        List<Grievance> grievances = grievanceRepository.findAllById(grievanceIds);
+
+        if (grievances.size() != grievanceIds.size()) {
+            throw new ResourceNotFoundException("One or more grievances not found");
+        }
+
+        // Collect all S3 keys first
+        List<String> s3Keys = grievances.stream()
+                .filter(g -> g.getAttachments() != null)
+                .flatMap(g -> g.getAttachments().stream())
+                .map(Attachment::getS3Key)
+                .toList();
+
+        // Delete from S3
+        for (String key : s3Keys) {
+            s3Service.deleteFile(key);
+        }
+
+        // Delete attachments in bulk
+        attachmentRepository.deleteByGrievance_GrievanceIdIn(grievanceIds);
+
+        // Delete grievances in bulk
+        grievanceRepository.deleteAllById(grievanceIds);
     }
 
     private void mapRequestToEntity(GrievanceRequest request, Grievance grievance) {
@@ -387,9 +409,9 @@ public class GrievanceService {
             row.add(escapeCsv(g.getAgentRemarks()));
             row.add(escapeCsv(g.getAgentName()));
             row.add(escapeCsv(g.getWorkGivenTo()));
-            row.add(escapeCsv(g.getAdminDate()));
+            row.add(escapeCsv(DateFormatter.formatToDDMMYY(g.getAdminDate())));
             row.add(escapeCsv(g.getAdminRemarks()));
-            row.add(escapeCsv(g.getCreatedAt()));
+            row.add(escapeCsv(DateFormatter.formatToDDMMYY(g.getCreatedAt())));
 
             if (g.getAttachments() != null) {
                 for (Attachment att : g.getAttachments()) {
