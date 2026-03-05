@@ -28,7 +28,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
-            @NonNull FilterChain filterChain) throws ServletException, IOException {
+            @NonNull FilterChain filterChain)
+            throws ServletException, IOException {
 
         String path = request.getRequestURI();
 
@@ -44,30 +45,83 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         final String authHeader = request.getHeader("Authorization");
-        final String jwt;
-        final String userContact;
 
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        jwt = authHeader.substring(7);
-        userContact = jwtService.extractUsername(jwt);
+        final String jwt = authHeader.substring(7);
 
-        if (userContact != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = this.userDetailsService.loadUserByUsername(userContact);
+        try {
 
-            if (jwtService.validateToken(jwt, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+            final String userContact = jwtService.extractUsername(jwt);
 
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            if (userContact != null &&
+                    SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                UserDetails userDetails =
+                        this.userDetailsService.loadUserByUsername(userContact);
+
+                if (jwtService.validateToken(jwt, userDetails)) {
+
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities());
+
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource()
+                                    .buildDetails(request));
+
+                    SecurityContextHolder.getContext()
+                            .setAuthentication(authToken);
+                }
             }
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (io.jsonwebtoken.ExpiredJwtException ex) {
+
+            sendErrorResponse(response,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "TOKEN_EXPIRED",
+                    "JWT token has expired. Please login again.");
+
+        } catch (Exception ex) {
+
+            sendErrorResponse(response,
+                    HttpServletResponse.SC_UNAUTHORIZED,
+                    "INVALID_TOKEN",
+                    "Invalid JWT token.");
+
+        }
     }
+
+    private void sendErrorResponse(HttpServletResponse response,
+                                   int status,
+                                   String error,
+                                   String message) throws IOException {
+
+        response.setStatus(status);
+        response.setContentType("application/json");
+
+        String json = String.format("""
+            {
+              "timestamp": "%s",
+              "status": %d,
+              "error": "%s",
+              "message": "%s"
+            }
+            """,
+                java.time.LocalDateTime.now(),
+                status,
+                error,
+                message
+        );
+
+        response.getWriter().write(json);
+    }
+
 }
