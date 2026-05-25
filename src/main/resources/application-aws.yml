@@ -9,12 +9,23 @@ spring:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/grievance_system}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:}
+
+  jpa:
+    open-in-view: false
+    properties:
+      hibernate:
+        ddl-auto: validate
+        temp:
+          use_jdbc_metadata_defaults: false
+        generate_statistics: false
+        format_sql: false
+      show-sql: false
   
   # JPA Configuration for AWS
-  jpa:
-    hibernate:
-      ddl-auto: validate  # Never use 'update' in production
-    show-sql: false
+#  jpa:
+#    hibernate:
+#      ddl-auto: validate  # Never use 'update' in production
+#    show-sql: false
   
   # Cloud Configuration
   cloud:
@@ -50,7 +61,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health
       base-path: /actuator
       path-mapping:
         health: health

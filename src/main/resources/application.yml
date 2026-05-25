@@ -19,7 +19,9 @@ spring:
     hikari:
       connection-timeout: 30000
       maximum-pool-size: 2
-      minimum-idle: 1
+      minimum-idle: 0
+      initialization-fail-timeout: 0
+      auto-commit: false
       max-lifetime: 300000
       idle-timeout: 60000
       connection-test-query: SELECT 1
@@ -30,7 +32,7 @@ spring:
       ddl-auto: none
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         jdbc:
           batch_size: 20
         order_inserts: true
@@ -52,7 +54,7 @@ server:
 # JWT Configuration
 jwt:
   secret: ${JWT_SECRET:your-secret-key-change-in-production}
-  expiration: 86400000 # 24 hours
+  expiration: 28800000 # 24 hours
 
 # AWS Configuration
 aws:
@@ -65,7 +67,7 @@ aws:
 file:
   upload:
     max-size: 10485760 # 10MB
-    allowed-extensions: jpg,jpeg,png,pdf,doc,docx
+    allowed-extensions: jpg,jpeg,png,pdf,doc,docx,HEIC
 
 # Security
 security:
@@ -74,8 +76,8 @@ security:
 # Logging
 logging:
   level:
-    com.grievance: DEBUG
+    com.grievance: INFO
     org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
+    org.hibernate.SQL: WARN
     com.zaxxer.hikari: INFO
-    com.amazonaws.serverless: DEBUG
+    com.amazonaws.serverless: INFO

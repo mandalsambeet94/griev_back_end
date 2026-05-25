@@ -12,6 +12,7 @@ public class GrievanceRequest {
 
     @NotBlank(message = "Block is required")
     private String block;
+    private String idempotencyKey;
 
     private String gp;
     private String villageSahi;

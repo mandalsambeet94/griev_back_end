@@ -35,7 +35,7 @@ public class S3Service {
     @Value("${aws.s3.presigned-url-expiry:900}")
     private Integer presignedUrlExpiry; // seconds
 
-    @Value("${file.upload.allowed-extensions:jpg,jpeg,png,pdf,doc,docx}")
+    @Value("${file.upload.allowed-extensions:jpg,jpeg,png,pdf,doc,docx,HEIC}")
     private String allowedExtensions;
 
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB

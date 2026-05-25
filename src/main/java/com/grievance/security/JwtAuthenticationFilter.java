@@ -1,5 +1,6 @@
 package com.grievance.security;
 
+import com.grievance.entity.User;
 import com.grievance.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -64,6 +65,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         this.userDetailsService.loadUserByUsername(userContact);
 
                 if (jwtService.validateToken(jwt, userDetails)) {
+
+                    User user = (User) userDetails;
+                    if ("AGENT".equalsIgnoreCase(user.getRole().name())) {
+
+                        if (user.getActiveToken() == null ||
+                                !jwt.equals(user.getActiveToken())) {
+
+                            sendErrorResponse(response,
+                                    HttpServletResponse.SC_UNAUTHORIZED,
+                                    "SESSION_INVALID",
+                                    "Session expired or logged in from another device.");
+
+                            return;
+                        }
+                    }
 
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(

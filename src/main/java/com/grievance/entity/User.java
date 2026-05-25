@@ -53,6 +53,12 @@ public class User implements UserDetails {
     @Column(name = "gp_assigned")
     private String gpAssigned;
 
+    @Column(name = "active_token")
+    private String activeToken;
+
+    @Column(name = "token_expiry")
+    private LocalDateTime tokenExpiry;
+
     // For Spring Security
    /* @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

@@ -132,18 +132,26 @@ public class GrievanceController {
             fileBytes = grievanceService.exportToCsv(request.getGrievanceIds());
 
             return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=grievances.xlsx")
+                    .header("Content-Transfer-Encoding", "binary") // 🔥 ADD THIS
+                    .contentType(MediaType.parseMediaType(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .body(fileBytes);
+
+            /*return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=grievances.csv")
                     .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
-                    .body(fileBytes);
+                    .body(fileBytes);*/
         }
         else {
-            fileBytes = grievanceService.exportToPdf(request.getGrievanceIds());
+            return null;
+            /*fileBytes = grievanceService.exportToPdf(request.getGrievanceIds());
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
                             "attachment; filename=grievances.pdf")
                     .contentType(MediaType.APPLICATION_PDF)
-                    .body(fileBytes);
+                    .body(fileBytes);*/
         }
     }
 }

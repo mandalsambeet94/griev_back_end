@@ -7,6 +7,7 @@ import com.grievance.service.AuthService;
 import com.grievance.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -46,5 +47,10 @@ public class AuthController {
     public ResponseEntity<UserDTO> getCurrentUser() {
         UserDTO user = userService.getCurrentUserDetails();
         return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout(HttpServletRequest request) {
+        return authService.logout(request);
     }
 }

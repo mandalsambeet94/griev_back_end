@@ -14,25 +14,30 @@ import com.grievance.repository.GrievanceRepository;
 import com.grievance.repository.GrievanceSpecification;
 
 import com.grievance.utility.DateFormatter;
-import com.lowagie.text.*;
+//import com.lowagie.text.*;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.common.usermodel.HyperlinkType;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.wp.usermodel.Paragraph;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xwpf.usermodel.Document;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 // POI (Excel)
-/*import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.CreationHelper;
-import org.apache.poi.ss.usermodel.Hyperlink;
 import org.apache.poi.ss.usermodel.IndexedColors;
-import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.common.usermodel.HyperlinkType;
-import org.apache.poi.xssf.streaming.SXSSFWorkbook;*/
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 // OpenPDF (PDF)
-import com.lowagie.text.pdf.PdfWriter;
+//import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.util.StringUtils;
 /*import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfPCell;
@@ -45,6 +50,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -58,16 +64,26 @@ public class GrievanceService {
 
     @Transactional
     public GrievanceDTO saveGrievance(GrievanceRequest request) {
+
+        /*if (!StringUtils.hasText(request.getIdempotencyKey())) {
+            throw new IllegalArgumentException("Idempotency key is required");
+        }*/
+
+        Optional<Grievance> existing =
+                grievanceRepository.findByIdempotencyKey(request.getIdempotencyKey());
+
+        if (existing.isPresent()) {
+            return GrievanceDTO.fromEntity(existing.get());
+        }
+
         User currentUser = authService.getCurrentUser();
 
         Grievance grievance = new Grievance();
         mapRequestToEntity(request, grievance);
 
-        // Set collected by current user
         grievance.setCollectedBy(currentUser);
-        //grievance.setAgentName(currentUser.getName());
+        grievance.setIdempotencyKey(request.getIdempotencyKey());
 
-        // Set default status
         if (grievance.getStatus() == null) {
             grievance.setStatus(Grievance.GrievanceStatus.PENDING);
         }
@@ -76,15 +92,23 @@ public class GrievanceService {
             grievance.setGp("N/A");
         }
 
-        // Save grievance
-        Grievance savedGrievance = grievanceRepository.save(grievance);
+        try {
+            Grievance savedGrievance = grievanceRepository.save(grievance);
 
-        // Save attachments if provided
-        if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
-            saveAttachments(savedGrievance, request.getAttachments());
+            if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
+                saveAttachments(savedGrievance, request.getAttachments());
+            }
+
+            return GrievanceDTO.fromEntity(savedGrievance);
+
+        } catch (DataIntegrityViolationException ex) {
+
+            Grievance alreadyCreated =
+                    grievanceRepository.findByIdempotencyKey(request.getIdempotencyKey())
+                            .orElseThrow();
+
+            return GrievanceDTO.fromEntity(alreadyCreated);
         }
-
-        return GrievanceDTO.fromEntity(savedGrievance);
     }
 
     @Transactional
@@ -118,6 +142,7 @@ public class GrievanceService {
         return GrievanceDTO.fromEntity(updatedGrievance);
     }
 
+    @Transactional(readOnly = true)
     public GrievanceDTO getGrievanceById(Long grievanceId) {
         Grievance grievance = grievanceRepository.findById(grievanceId)
                 .orElseThrow(() -> new ResourceNotFoundException("Grievance not found"));
@@ -129,6 +154,7 @@ public class GrievanceService {
         return GrievanceDTO.fromEntity(grievance);
     }
 
+    @Transactional(readOnly = true)
     public Page<GrievanceDTO> getAllGrievances(Pageable pageable) {
         User currentUser = authService.getCurrentUser();
 
@@ -168,6 +194,7 @@ public class GrievanceService {
                 .collect(Collectors.toList());
     }*/
 
+    @Transactional(readOnly = true)
     public List<GrievanceDTO> getGrievancesByFilters(
             String block,
             String gp,
@@ -212,6 +239,7 @@ public class GrievanceService {
     }
 
 
+    @Transactional(readOnly = true)
     public List<GrievanceDTO> getGrievances(GrievanceFilter filter) {
         List<Grievance> grievances =
                 grievanceRepository.findAll(
@@ -309,7 +337,7 @@ public class GrievanceService {
     public byte[] exportToCsv(List<Long> ids) throws Exception {
         List<Grievance> grievances =
                 grievanceRepository.findAllWithAttachmentsByIdIn(ids);
-        return generateCsv(grievances);
+        return generateExcel(grievances);
     }
 
 
@@ -322,14 +350,15 @@ public class GrievanceService {
     public byte[] exportToPdf(List<Long> ids) throws Exception {
         List<Grievance> grievances =
                 grievanceRepository.findAllWithAttachmentsByIdIn(ids);
-        return generatePdf(grievances);
+        //return generatePdf(grievances);
+        return null;
     }
 
     private String nullSafe(Object value) {
         return value == null ? "" : value.toString();
     }
 
-    private void addLabelValue(Document document, String label, Object value, Font font) throws Exception {
+    /*private void addLabelValue(Document document, String label, Object value, Font font) throws Exception {
         Paragraph paragraph = new Paragraph(label + ": " + nullSafe(value), font);
         paragraph.setSpacingAfter(4f);
         document.add(paragraph);
@@ -341,7 +370,7 @@ public class GrievanceService {
             paragraph.setSpacingAfter(3f);
             document.add(paragraph);
         }
-    }
+    }*/
 
     private String escapeCsv(Object value) {
 
@@ -374,9 +403,8 @@ public class GrievanceService {
                 "Block", "GP", "Village/Sahi", "Address", "Ward No",
                 "Name", "Father/Spouse Name", "Contact",
                 "Topic1", "Topic2", "Topic3", "Topic4", "Topic5",
-                "Grievance Details", "Agent Remarks", "Agent Name",
-                "Work Given To", "Admin Date", "Admin Remarks",
-                "Created At"
+                "Grievance Details", "Agent Remarks", "Created At", "Agent Name",
+                "Work Given To", "Admin Date", "Admin Remarks"
         ));
 
         for (int i = 1; i <= maxAttachments; i++) {
@@ -407,11 +435,11 @@ public class GrievanceService {
 
             row.add(escapeCsv(g.getGrievanceDetails()));
             row.add(escapeCsv(g.getAgentRemarks()));
+            row.add(escapeCsv(DateFormatter.convertUtcToISTDate(g.getCreatedAt())));
             row.add(escapeCsv(g.getAgentName()));
             row.add(escapeCsv(g.getWorkGivenTo()));
             row.add(escapeCsv(DateFormatter.formatToDDMMYY(g.getAdminDate())));
             row.add(escapeCsv(g.getAdminRemarks()));
-            row.add(escapeCsv(DateFormatter.formatToDDMMYY(g.getCreatedAt())));
 
             if (g.getAttachments() != null) {
                 for (Attachment att : g.getAttachments()) {
@@ -429,118 +457,164 @@ public class GrievanceService {
 
 
 
-    /*private byte[] generateExcel(List<Grievance> grievances) throws Exception {
+    private byte[] generateExcel(List<Grievance> grievances) throws Exception {
 
-        SXSSFWorkbook workbook = new SXSSFWorkbook();
-        SXSSFSheet sheet = workbook.createSheet("Grievances");
+        try {
+            SXSSFWorkbook workbook = new SXSSFWorkbook();
+            SXSSFSheet sheet = workbook.createSheet("Grievances");
 
+            CreationHelper creationHelper = workbook.getCreationHelper();
 
+            // ===== Find max attachment count =====
+            int maxAttachments = grievances.stream()
+                    .mapToInt(g -> g.getAttachments() == null ? 0 : g.getAttachments().size())
+                    .max()
+                    .orElse(0);
 
-        CreationHelper creationHelper = workbook.getCreationHelper();
+            List<String> headers = new ArrayList<>(List.of(
+                    "Block", "GP", "Village/Sahi", "Address", "Ward No",
+                    "Name", "Father/Spouse Name", "Contact",
+                    "Topic1", "Topic2", "Topic3", "Topic4", "Topic5",
+                    "Grievance Details", "Agent Remarks","Created At", "Agent Name",
+                    "Work Given To", "Admin Date", "Admin Remarks"
+            ));
 
-        // ===== Find max attachment count =====
-        int maxAttachments = grievances.stream()
-                .mapToInt(g -> g.getAttachments() == null ? 0 : g.getAttachments().size())
-                .max()
-                .orElse(0);
+            for (int i = 1; i <= maxAttachments; i++) {
+                headers.add("Attachment " + i);
+            }
 
-        List<String> headers = new ArrayList<>(List.of(
-                "Block", "GP", "Village/Sahi", "Address", "Ward No",
-                "Name", "Father/Spouse Name", "Contact",
-                "Topic1", "Topic2", "Topic3", "Topic4", "Topic5",
-                "Grievance Details", "Agent Remarks", "Agent Name",
-                "Work Given To", "Admin Date", "Admin Remarks",
-                "Created At"
-        ));
+            // ===== Header Style =====
+            CellStyle headerStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font poiHeaderFont = workbook.createFont();
+            poiHeaderFont.setBold(true);
+            poiHeaderFont.setFontHeightInPoints((short) 11);
 
-        for (int i = 1; i <= maxAttachments; i++) {
-            headers.add("Attachment " + i);
-        }
+            headerStyle.setFont(poiHeaderFont);
+            headerStyle.setFillForegroundColor(IndexedColors.YELLOW.getIndex());
+            headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+            headerStyle.setAlignment(HorizontalAlignment.CENTER);
 
-        // ===== Header Style =====
-        CellStyle headerStyle = workbook.createCellStyle();
-        org.apache.poi.ss.usermodel.Font poiHeaderFont = workbook.createFont();
-        poiHeaderFont.setBold(true);
+            // Borders
+            headerStyle.setBorderTop(BorderStyle.THIN);
+            headerStyle.setBorderBottom(BorderStyle.THIN);
+            headerStyle.setBorderLeft(BorderStyle.THIN);
+            headerStyle.setBorderRight(BorderStyle.THIN);
+            headerStyle.setWrapText(true);
 
-        headerStyle.setFont(poiHeaderFont);
+            // ===== Wrap Style (for long text) =====
+            CellStyle wrapStyle = workbook.createCellStyle();
+            wrapStyle.setWrapText(true);
 
-        Row headerRow = sheet.createRow(0);
-        for (int i = 0; i < headers.size(); i++) {
-            Cell cell = headerRow.createCell(i);
-            cell.setCellValue(headers.get(i));
-            cell.setCellStyle(headerStyle);
-        }
+            // ===== Hyperlink Style =====
+            CellStyle linkStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font linkFont = workbook.createFont();
+            linkFont.setUnderline(org.apache.poi.ss.usermodel.Font.U_SINGLE);
+            linkFont.setColor(IndexedColors.BLUE.getIndex());
+            linkStyle.setFont(linkFont);
 
-        CellStyle linkStyle = workbook.createCellStyle();
-        org.apache.poi.ss.usermodel.Font linkFont = workbook.createFont();
-        linkFont.setUnderline(org.apache.poi.ss.usermodel.Font.U_SINGLE);
-        linkFont.setColor(IndexedColors.BLUE.getIndex());
-        linkStyle.setFont(linkFont);
+            // ===== Header Row =====
+            Row headerRow = sheet.createRow(0);
+            for (int i = 0; i < headers.size(); i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers.get(i).toUpperCase());
+                cell.setCellStyle(headerStyle);
+            }
 
+            // ===== Freeze Header =====
+            sheet.createFreezePane(0, 1);
 
-        int rowIdx = 1;
+            // ===== Add Filters =====
+            sheet.setAutoFilter(new CellRangeAddress(0, 0, 0, headers.size() - 1));
 
-        for (Grievance g : grievances) {
+            int rowIdx = 1;
 
-            Row row = sheet.createRow(rowIdx++);
-            int col = 0;
+            for (Grievance g : grievances) {
 
-            row.createCell(col++).setCellValue(nullSafe(g.getBlock()));
-            row.createCell(col++).setCellValue(nullSafe(g.getGp()));
-            row.createCell(col++).setCellValue(nullSafe(g.getVillageSahi()));
-            row.createCell(col++).setCellValue(nullSafe(g.getAddress()));
-            row.createCell(col++).setCellValue(nullSafe(g.getWardNo()));
-            row.createCell(col++).setCellValue(nullSafe(g.getName()));
-            row.createCell(col++).setCellValue(nullSafe(g.getFatherSpouseName()));
-            row.createCell(col++).setCellValue(nullSafe(g.getContact()));
+                Row row = sheet.createRow(rowIdx++);
+                row.setHeightInPoints(60); // better readability
 
-            row.createCell(col++).setCellValue(nullSafe(g.getTopic1()));
-            row.createCell(col++).setCellValue(nullSafe(g.getTopic2()));
-            row.createCell(col++).setCellValue(nullSafe(g.getTopic3()));
-            row.createCell(col++).setCellValue(nullSafe(g.getTopic4()));
-            row.createCell(col++).setCellValue(nullSafe(g.getTopic5()));
+                int col = 0;
 
-            row.createCell(col++).setCellValue(nullSafe(g.getGrievanceDetails()));
-            row.createCell(col++).setCellValue(nullSafe(g.getAgentRemarks()));
-            row.createCell(col++).setCellValue(nullSafe(g.getAgentName()));
-            row.createCell(col++).setCellValue(nullSafe(g.getWorkGivenTo()));
-            row.createCell(col++).setCellValue(nullSafe(g.getAdminDate()));
-            row.createCell(col++).setCellValue(nullSafe(g.getAdminRemarks()));
-            row.createCell(col++).setCellValue(nullSafe(g.getCreatedAt()));
+                row.createCell(col++).setCellValue(nullSafe(g.getBlock()));
+                row.createCell(col++).setCellValue(nullSafe(g.getGp()));
+                row.createCell(col++).setCellValue(nullSafe(g.getVillageSahi()));
 
-            // Attachments with clickable links
-            if (g.getAttachments() != null) {
-                for (Attachment att : g.getAttachments()) {
+                Cell addressCell = row.createCell(col++);
+                addressCell.setCellValue(nullSafe(g.getAddress()));
+                addressCell.setCellStyle(wrapStyle);
 
-                    Cell cell = row.createCell(col++);
-                    String url = nullSafe(att.getS3Url());
+                row.createCell(col++).setCellValue(nullSafe(g.getWardNo()));
+                row.createCell(col++).setCellValue(nullSafe(g.getName()));
+                row.createCell(col++).setCellValue(nullSafe(g.getFatherSpouseName()));
+                row.createCell(col++).setCellValue(nullSafe(g.getContact()));
 
-                    cell.setCellValue(url);
+                row.createCell(col++).setCellValue(nullSafe(g.getTopic1()));
+                row.createCell(col++).setCellValue(nullSafe(g.getTopic2()));
+                row.createCell(col++).setCellValue(nullSafe(g.getTopic3()));
+                row.createCell(col++).setCellValue(nullSafe(g.getTopic4()));
+                row.createCell(col++).setCellValue(nullSafe(g.getTopic5()));
 
-                    if (!url.isEmpty()) {
-                        Hyperlink link = creationHelper.createHyperlink(HyperlinkType.URL);
-                        link.setAddress(url);
-                        cell.setHyperlink(link);
-                        cell.setCellStyle(linkStyle);
+                Cell grievanceCell = row.createCell(col++);
+                grievanceCell.setCellValue(nullSafe(g.getGrievanceDetails()));
+                grievanceCell.setCellStyle(wrapStyle);
+
+                Cell remarksCell = row.createCell(col++);
+                remarksCell.setCellValue(nullSafe(g.getAgentRemarks()));
+                remarksCell.setCellStyle(wrapStyle);
+
+                row.createCell(col++).setCellValue(nullSafe(DateFormatter.convertUtcToISTDate(g.getCreatedAt())));
+                row.createCell(col++).setCellValue(nullSafe(g.getAgentName()));
+                row.createCell(col++).setCellValue(nullSafe(g.getWorkGivenTo()));
+                row.createCell(col++).setCellValue(nullSafe(DateFormatter.formatToDDMMYY(g.getAdminDate())));
+
+                Cell adminRemarksCell = row.createCell(col++);
+                adminRemarksCell.setCellValue(nullSafe(g.getAdminRemarks()));
+                adminRemarksCell.setCellStyle(wrapStyle);
+
+                // ===== Attachments =====
+                if (g.getAttachments() != null) {
+                    for (Attachment att : g.getAttachments()) {
+
+                        Cell cell = row.createCell(col++);
+                        String url = nullSafe(att.getS3Url());
+
+                        if (!url.isEmpty()) {
+                            cell.setCellValue("Open"); // cleaner UX
+                            Hyperlink link = creationHelper.createHyperlink(HyperlinkType.URL);
+                            link.setAddress(url);
+                            cell.setHyperlink(link);
+                            cell.setCellStyle(linkStyle);
+                        } else {
+                            cell.setCellValue("");
+                        }
                     }
                 }
             }
-        }
 
-        // Auto-size columns
-        for (int i = 0; i < headers.size(); i++) {
+            // ===== Auto-size + limit width =====
             sheet.trackAllColumnsForAutoSizing();
-            sheet.autoSizeColumn(i);
+
+            for (int i = 0; i < headers.size(); i++) {
+                sheet.autoSizeColumn(i);
+
+                int maxWidth = 8000;
+                if (sheet.getColumnWidth(i) > maxWidth) {
+                    sheet.setColumnWidth(i, maxWidth);
+                }
+            }
+
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            workbook.dispose();
+
+            return out.toByteArray();
+
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to generate Excel file", ex);
         }
+    }
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        workbook.write(out);
-        workbook.dispose();
-
-        return out.toByteArray();
-    }*/
-
-    private byte[] generatePdf(List<Grievance> grievances) throws Exception {
+    /*private byte[] generatePdf(List<Grievance> grievances) throws Exception {
 
         Document document = new Document(PageSize.A4);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -647,7 +721,7 @@ public class GrievanceService {
 
         document.close();
         return out.toByteArray();
-    }
+    }*/
 
 
 

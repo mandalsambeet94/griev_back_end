@@ -47,23 +47,27 @@ public class UserService {
         return response;
     }
 
+    @Transactional(readOnly = true)
     public UserDTO getUserDetails(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return UserDTO.fromEntity(user);
     }
 
+    @Transactional(readOnly = true)
     public UserDTO getCurrentUserDetails() {
         User user = authService.getCurrentUser();
         return UserDTO.fromEntity(user);
     }
 
+    @Transactional(readOnly = true)
     public List<UserDTO> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(UserDTO::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<UserDTO> getAgents() {
         return userRepository.findByRole(User.Role.AGENT).stream()
                 .map(UserDTO::fromEntity)
@@ -84,8 +88,8 @@ public class UserService {
         // Check permissions
         User currentUser = authService.getCurrentUser();
         if (!currentUser.getRole().equals(User.Role.ADMIN) &&
-                !currentUser.getRole().equals(User.Role.SUPER_ADMIN) &&
-                !currentUser.getId().equals(userId)) {
+                !currentUser.getRole().equals(User.Role.SUPER_ADMIN) /*&&
+                !currentUser.getId().equals(userId)*/) {
             throw new UnauthorizedException("You can only update your own profile");
         }
 

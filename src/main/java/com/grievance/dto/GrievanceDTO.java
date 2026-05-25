@@ -3,10 +3,13 @@ package com.grievance.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.grievance.entity.Grievance;
+import com.grievance.utility.DateFormatter;
 import lombok.Data;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,10 +42,10 @@ public class GrievanceDTO {
 
     private String adminRemarks;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "dd-MM-yyyy hh:mm a", timezone = "Asia/Kolkata")
     private LocalDateTime createdAt;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    @JsonFormat(pattern = "dd-MM-yyyy hh:mm a", timezone = "Asia/Kolkata")
     private LocalDateTime updatedAt;
 
     private UserDTO collectedBy;
@@ -51,6 +54,7 @@ public class GrievanceDTO {
     private List<AttachmentDTO> attachments;
 
     public static GrievanceDTO fromEntity(Grievance grievance) {
+
         GrievanceDTO dto = new GrievanceDTO();
         dto.setGrievanceId(grievance.getGrievanceId());
         dto.setBlock(grievance.getBlock());
@@ -73,8 +77,8 @@ public class GrievanceDTO {
         dto.setStatus(grievance.getStatus() != null ? grievance.getStatus().name() : null);
         dto.setAdminDate(grievance.getAdminDate());
         dto.setAdminRemarks(grievance.getAdminRemarks());
-        dto.setCreatedAt(grievance.getCreatedAt());
-        dto.setUpdatedAt(grievance.getUpdatedAt());
+        dto.setCreatedAt(DateFormatter.convertUtcToIst(grievance.getCreatedAt()));
+        dto.setUpdatedAt(DateFormatter.convertUtcToIst(grievance.getUpdatedAt()));
 
         if (grievance.getCollectedBy() != null) {
             dto.setCollectedBy(UserDTO.fromEntity(grievance.getCollectedBy()));

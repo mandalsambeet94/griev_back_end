@@ -9,11 +9,9 @@ import com.grievance.repository.GrievanceRepository;
 import com.grievance.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.ZoneId;
+import java.time.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,6 +25,7 @@ public class DashboardService {
     private final UserRepository userRepository;
     private final AuthService authService;
 
+    @Transactional(readOnly = true)
     public DashboardResponse getAdminDashboard(LocalDate startDate, LocalDate endDate) {
         DashboardResponse response = new DashboardResponse();
 
@@ -74,6 +73,7 @@ public class DashboardService {
         return response;
     }
 
+    @Transactional(readOnly = true)
     public DashboardResponse getAgentDashboard(LocalDate startDate, LocalDate endDate) {
         DashboardResponse response = new DashboardResponse();
         User currentUser = authService.getCurrentUser();
@@ -99,10 +99,21 @@ public class DashboardService {
         }
         response.setGrievanceStatusCounts(statusCounts);
 
-        ZoneId zoneId = ZoneId.of("Asia/Kolkata");
-        LocalDate today = LocalDate.now(zoneId);
+        ZoneId istZone = ZoneId.of("Asia/Kolkata");
+        ZoneId utcZone = ZoneId.of("UTC");
 
-        List<Grievance> grievances = grievanceRepository.countTodayByAgent(today.atStartOfDay(), today.plusDays(1).atStartOfDay(), currentUser);
+        LocalDate todayIst = LocalDate.now(istZone);
+
+// IST → ZonedDateTime
+        ZonedDateTime startOfDayIst = todayIst.atStartOfDay(istZone);
+        ZonedDateTime endOfDayIst = todayIst.plusDays(1).atStartOfDay(istZone);
+
+// Convert to UTC
+        LocalDateTime startUtc = startOfDayIst.withZoneSameInstant(utcZone).toLocalDateTime();
+        LocalDateTime endUtc = endOfDayIst.withZoneSameInstant(utcZone).toLocalDateTime();
+
+        List<Grievance> grievances =
+                grievanceRepository.countTodayByAgent(startUtc, endUtc, currentUser);
 
         response.setRecentActivity(grievances.stream()
                 .map(GrievanceDTO::fromEntity)

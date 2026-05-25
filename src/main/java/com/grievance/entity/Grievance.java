@@ -107,6 +107,9 @@ public class Grievance {
     @JoinColumn(name = "assigned_to")
     private User assignedTo;
 
+    @Column(name = "idempotency_key", length = 150)
+    private String idempotencyKey;
+
     public enum GrievanceStatus {
         PENDING, IN_PROGRESS, COMPLETED, REJECTED, REOPENED
     }

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface GrievanceRepository extends JpaRepository<Grievance, Long>, JpaSpecificationExecutor<Grievance> {
@@ -131,7 +132,10 @@ WHERE g.createdAt >= :startOfDay
     FROM Grievance g
     LEFT JOIN FETCH g.attachments a
     WHERE g.id IN :ids
+    ORDER BY g.createdAt DESC
 """)
     List<Grievance> findAllWithAttachmentsByIdIn(@Param("ids") List<Long> ids);
+
+    Optional<Grievance> findByIdempotencyKey(String key);
 
 }

@@ -20,7 +20,9 @@ public class JwtService {
     @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration}")
+    /*@Value("${jwt.expiration}")
+    private Long expiration;*/
+    @Value("${jwt.expiration:28800000}")
     private Long expiration;
 
     private Key getSigningKey() {
@@ -71,4 +73,5 @@ public class JwtService {
         final String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
+
 }
