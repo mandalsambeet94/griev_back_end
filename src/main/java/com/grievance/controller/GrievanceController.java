@@ -121,6 +121,17 @@ public class GrievanceController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/attachments")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
+    @Operation(summary = "Delete attachments from grievances")
+    public ResponseEntity<Void> deleteAttachments(
+            @RequestBody List<Long> attachmentIds) {
+
+        grievanceService.deleteAttachments(attachmentIds);
+
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/export")
     @PreAuthorize("hasRole('ADMIN') or hasRole('SUPER_ADMIN')")
     public ResponseEntity<byte[]> exportGrievances(

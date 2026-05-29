@@ -293,6 +293,43 @@ public class GrievanceService {
         grievanceRepository.deleteAllById(grievanceIds);
     }
 
+    @Transactional
+    public void deleteAttachments(List<Long> attachmentIds) {
+
+        User currentUser = authService.getCurrentUser();
+
+        if (!currentUser.getRole().equals(User.Role.ADMIN)
+                && !currentUser.getRole().equals(User.Role.SUPER_ADMIN)) {
+            throw new UnauthorizedException("Only admin can delete attachments");
+        }
+
+        if (attachmentIds == null || attachmentIds.isEmpty()) {
+            throw new IllegalArgumentException("Attachment IDs cannot be empty");
+        }
+
+        List<Attachment> attachments =
+                attachmentRepository.findAllById(attachmentIds);
+
+        if (attachments.size() != attachmentIds.size()) {
+            throw new ResourceNotFoundException(
+                    "One or more attachments not found");
+        }
+
+        // Delete from S3
+        for (Attachment attachment : attachments) {
+            try {
+                s3Service.deleteFile(attachment.getS3Key());
+            } catch (Exception ex) {
+                throw new RuntimeException(
+                        "Failed to delete attachment from S3: "
+                                + attachment.getAttachmentId(), ex);
+            }
+        }
+
+        // Delete from DB
+        attachmentRepository.deleteAll(attachments);
+    }
+
     private void mapRequestToEntity(GrievanceRequest request, Grievance grievance) {
         grievance.setBlock(request.getBlock());
         grievance.setGp(request.getGp());
