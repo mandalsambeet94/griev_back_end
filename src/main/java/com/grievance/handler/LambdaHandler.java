@@ -20,13 +20,12 @@ public class LambdaHandler implements RequestStreamHandler {
         try {
             handler = SpringBootLambdaContainerHandler.getAwsProxyHandler(GrievanceApplication.class);
 
-            // 🔥 IMPORTANT
-            handler.onStartup(servletContext -> {
-                servletContext.setInitParameter(
-                        "binaryContentTypes",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream"
-                );
-            });
+            // Correct way to register binary content types
+            handler.getContainerConfig().addBinaryContentTypes(
+                    "application/pdf",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/octet-stream"
+            );
 
         } catch (ContainerInitializationException e) {
             throw new RuntimeException("Could not initialize Spring Boot application", e);

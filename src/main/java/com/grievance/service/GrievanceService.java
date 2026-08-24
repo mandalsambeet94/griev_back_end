@@ -14,15 +14,12 @@ import com.grievance.repository.GrievanceRepository;
 import com.grievance.repository.GrievanceSpecification;
 
 import com.grievance.utility.DateFormatter;
-//import com.lowagie.text.*;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.wp.usermodel.Paragraph;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.apache.poi.xwpf.usermodel.Document;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,12 +34,18 @@ import org.apache.poi.common.usermodel.HyperlinkType;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 
 // OpenPDF (PDF)
-//import com.lowagie.text.pdf.PdfWriter;
+import com.lowagie.text.Document;
+import com.lowagie.text.Element;
+import com.lowagie.text.Font;
+import com.lowagie.text.Paragraph;
+import com.lowagie.text.PageSize;
+import com.lowagie.text.Chunk;
+import com.lowagie.text.pdf.PdfWriter;
 import org.springframework.util.StringUtils;
-/*import com.lowagie.text.pdf.PdfPTable;
+import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfPCell;
 
-import java.awt.Color;*/
+import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 
 import java.nio.charset.StandardCharsets;
@@ -51,6 +54,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -65,9 +69,11 @@ public class GrievanceService {
     @Transactional
     public GrievanceDTO saveGrievance(GrievanceRequest request) {
 
-        /*if (!StringUtils.hasText(request.getIdempotencyKey())) {
-            throw new IllegalArgumentException("Idempotency key is required");
-        }*/
+        if (!StringUtils.hasText(request.getIdempotencyKey())) {
+            String idempotencyKey = UUID.randomUUID().toString();
+            request.setIdempotencyKey(idempotencyKey);
+            //throw new IllegalArgumentException("Idempotency key is required");
+        }
 
         Optional<Grievance> existing =
                 grievanceRepository.findByIdempotencyKey(request.getIdempotencyKey());
@@ -387,15 +393,15 @@ public class GrievanceService {
     public byte[] exportToPdf(List<Long> ids) throws Exception {
         List<Grievance> grievances =
                 grievanceRepository.findAllWithAttachmentsByIdIn(ids);
-        //return generatePdf(grievances);
-        return null;
+        return generatePdf(grievances);
+        //return null;
     }
 
     private String nullSafe(Object value) {
         return value == null ? "" : value.toString();
     }
 
-    /*private void addLabelValue(Document document, String label, Object value, Font font) throws Exception {
+    private void addLabelValue(Document document, String label, Object value, Font font) throws Exception {
         Paragraph paragraph = new Paragraph(label + ": " + nullSafe(value), font);
         paragraph.setSpacingAfter(4f);
         document.add(paragraph);
@@ -407,7 +413,7 @@ public class GrievanceService {
             paragraph.setSpacingAfter(3f);
             document.add(paragraph);
         }
-    }*/
+    }
 
     private String escapeCsv(Object value) {
 
@@ -651,7 +657,7 @@ public class GrievanceService {
         }
     }
 
-    /*private byte[] generatePdf(List<Grievance> grievances) throws Exception {
+    private byte[] generatePdf(List<Grievance> grievances) throws Exception {
 
         Document document = new Document(PageSize.A4);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -758,7 +764,7 @@ public class GrievanceService {
 
         document.close();
         return out.toByteArray();
-    }*/
+    }
 
 
 
